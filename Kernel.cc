@@ -1,8 +1,8 @@
-#include "kernel.h"
+#include "Kernel.h"
 
 #include <immintrin.h>
-#include <vector>
 #include <thread>
+#include <vector>
 
 #if defined(DEBUG) || defined(DEBUGMORE)
 #include <cstdio>
@@ -142,8 +142,8 @@ void printInts(char *str, __m512i x) {
   broadcast_fma_incrementIdx_16_f32(a, b, cF, broadcastIdx, ones); \
 } ((void)0)
 
-void mm_f32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
-            MMF32Params *params) {
+void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
+           MMF32Params *params) {
   int NBytes = params->NBytes;
 
   char* c[16] = {cCurr, cCurr+NBytes, cCurr+2*NBytes, cCurr+3*NBytes,
@@ -421,7 +421,7 @@ void mm_f32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
 }
 
-void mm_f32_full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
@@ -449,7 +449,7 @@ void mm_f32_full(char* A, char* B, char* C, int M, int N, int K, int numThreads)
       ((aBlockBytes*N+bBlockBytes)>>2)/N, ((aBlockBytes*+bBlockBytes)>>2)%N
     );
 #endif
-    threads.push_back(std::thread(mm_f32, a, b, c, blockSize, &params));
+    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params));
   }
   for (auto &th: threads) {
     th.join();

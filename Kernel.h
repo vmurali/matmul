@@ -29,5 +29,4 @@ struct MMF32Params {
 };
 
 
-void mm_f32_full(char* A, char* B, char* C, int M, int N, int K,
-                 int numThreads);
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads);

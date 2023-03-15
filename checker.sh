@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 kernel.cc test.cc -o ./checker.out
+clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./checker.out
 
 for k in {1..2}
 do

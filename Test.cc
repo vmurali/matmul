@@ -1,9 +1,8 @@
-#include "kernel.h"
+#include "Kernel.h"
 
-#include <vector>
-#include <thread>
 #include <cstdio>
 #include <cstdlib>
+#include <thread>
 
 #ifdef DEBUG
 void print_mm(float *X, int M, int N) {
@@ -89,7 +88,7 @@ int main(int argc, char**argv) {
 
   auto start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < numTries; i++) {
-    mm_f32_full((char*)A, (char*)B, (char*)C, M, N, K, numThreads);
+    MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads);
   }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> diff = end - start;

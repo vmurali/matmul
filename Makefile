@@ -1,14 +1,14 @@
 .PHONY: all clean
 
-all: kernel test
-	clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 kernel.o test.o -o a.out
+all: Kernel Test
+	clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.o Test.o -o a.out
 
 clean:
 	rm *.o *.out
 
-test: test.cc
-	clang++ -Wno-deprecated-register -mavx512f -O3 -c test.cc
+Test: Test.cc
+	clang++ -Wno-deprecated-register -mavx512f -O3 -c Test.cc
 
-kernel: kernel.cc kernel.h
-	clang++ -Wno-deprecated-register -mavx512f -O3 -c kernel.cc
+Kernel: Kernel.cc Kernel.h
+	clang++ -Wno-deprecated-register -mavx512f -O3 -c Kernel.cc
 

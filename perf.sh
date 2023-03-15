@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 kernel.cc test.cc -o ./perf.out
+clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./perf.out
 
 for i in {1..14}
 do
