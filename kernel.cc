@@ -59,9 +59,7 @@ void printInts(char *str, __m512i x) {
   }
   printf("\n");
 }
-#endif
 
-#ifdef DEBUGMORE
 #define broadcast_fma_incrementIdx_16_f32( \
   a, \
   b, \

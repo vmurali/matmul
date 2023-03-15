@@ -56,17 +56,17 @@ void check(float *X, float *Y, int M, int N) {
 }
 
 int main(int argc, char**argv) {
-  if (!(argc == 4 || argc == 5)) {
-    printf("%d\n", argc);
-    printf("Usage: %s M N K [numThreads]\n", argv[0]);
+  if (!(argc == 5 || argc == 6)) {
+    printf("Usage: %s M N K check [numThreads]\n", argv[0]);
     return 1;
   }
   const int M = atoi(argv[1]);
   const int N = atoi(argv[2]);
   const int K = atoi(argv[3]);
+  const int isCheck = atoi(argv[4]);
   int numThreads = std::thread::hardware_concurrency();
-  if (argc == 5)
-    numThreads = atoi(argv[4]);
+  if (argc == 6 && atoi(argv[5]) != 0)
+    numThreads = atoi(argv[5]);
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   float *A = new float[M*K];
@@ -85,6 +85,7 @@ int main(int argc, char**argv) {
   printf("C\n");
   print_mm(C, M, N);
 #endif
+
   auto start = std::chrono::high_resolution_clock::now();
   mm_f32_full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, threads);
   auto end = std::chrono::high_resolution_clock::now();
@@ -92,8 +93,10 @@ int main(int argc, char**argv) {
 
   printf("%d %d %d: %f GFLOPS\n", M, N, K, (long long)M*N*K*2/diff.count()*(1e-9f));
 
-  simple_mm(A, B, D, M, N, K);
-  check(C, D, M, N);
+  if (isCheck) {
+    simple_mm(A, B, D, M, N, K);
+    check(C, D, M, N);
+  }
 
   return 0;
 }
