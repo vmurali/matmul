@@ -56,19 +56,20 @@ void check(float *X, float *Y, int M, int N) {
 }
 
 int main(int argc, char**argv) {
-  if (!(argc == 5 || argc == 6)) {
-    printf("Usage: %s M N K check [numThreads]\n", argv[0]);
+  if (!(argc == 6 || argc == 7)) {
+    printf("Usage: %s M N K check numTries [numThreads]\n", argv[0]);
     return 1;
   }
   const int M = atoi(argv[1]);
   const int N = atoi(argv[2]);
   const int K = atoi(argv[3]);
-  const int isCheck = atoi(argv[4]);
+  int isCheck = atoi(argv[4]);
+  const int numTries = atoi(argv[5]);
+  if (numTries > 0)
+    isCheck = 0;
   int numThreads = std::thread::hardware_concurrency();
-  if (argc == 6 && atoi(argv[5]) != 0)
-    numThreads = atoi(argv[5]);
-  std::vector<std::thread> threads;
-  threads.reserve(numThreads);
+  if (argc == 7 && atoi(argv[6]) != 0)
+    numThreads = atoi(argv[6]);
   float *A = new float[M*K];
   float *B = new float[N*K];
   float *C = new float[M*N];
@@ -87,11 +88,13 @@ int main(int argc, char**argv) {
 #endif
 
   auto start = std::chrono::high_resolution_clock::now();
-  mm_f32_full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, threads);
+  for (int i = 0; i < numTries; i++) {
+    mm_f32_full((char*)A, (char*)B, (char*)C, M, N, K, numThreads);
+  }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> diff = end - start;
 
-  printf("%d %d %d: %f GFLOPS\n", M, N, K, (long long)M*N*K*2/diff.count()*(1e-9f));
+  printf("%d %d %d: %f GFLOPS\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f));
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);

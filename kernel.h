@@ -1,5 +1,4 @@
 #include <vector>
-#include <thread>
 
 struct MMF32Params {
   char *A;
@@ -31,4 +30,4 @@ struct MMF32Params {
 
 
 void mm_f32_full(char* A, char* B, char* C, int M, int N, int K,
-                 int numThreads, std::vector<std::thread> &threads);
+                 int numThreads);

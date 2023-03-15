@@ -421,7 +421,9 @@ void mm_f32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
 }
 
-void mm_f32_full(char* A, char* B, char* C, int M, int N, int K, int numThreads, std::vector<std::thread> &threads) {
+void mm_f32_full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
+  std::vector<std::thread> threads;
+  threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
   int MTiles = (M+15)>>4;
   int NTiles = (N+15)>>4;
