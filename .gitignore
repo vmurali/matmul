@@ -3,3 +3,5 @@
 .*.swo
 *.o
 checker
+checker.result
+perf

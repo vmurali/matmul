@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./checker.out
+clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./checker
 
 for k in {1..2}
 do
@@ -11,7 +11,7 @@ do
       for t in {1..256}
       do
         echo "$i $j $k 1 1 $t"
-        ./checker.out $i $j $k 1 1 $t
+        ./checker $i $j $k 1 1 $t
         error=$?
         if [[ $error -ne 0 ]]; then
           echo "Wrong($error): $i $j $k $t"
