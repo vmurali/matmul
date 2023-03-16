@@ -64,7 +64,7 @@ int main(int argc, char**argv) {
   const int K = atoi(argv[3]);
   int isCheck = atoi(argv[4]);
   const int numTries = atoi(argv[5]);
-  if (numTries > 0)
+  if (numTries > 1)
     isCheck = 0;
   int numThreads = std::thread::hardware_concurrency();
   if (argc == 7 && atoi(argv[6]) != 0)
