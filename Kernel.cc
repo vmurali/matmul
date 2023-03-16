@@ -232,7 +232,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
-      useT = true;
+      //useT = true;
     }
     {
       if (params->NRemainder != 0) {
@@ -385,7 +385,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
-      useT = true;
+      //useT = true;
     }
     {
       if (NMask != 0) {
@@ -478,7 +478,8 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, c
 #ifdef DEBUG
   printf("blockSize: %d, MTiles: %d, NTiles: %d\n", blockSize, MTiles, NTiles);
 #endif
-  for (int j = 0; j < MNTiles; j += blockSize) {
+  char *localT = T;
+  for (int j = 0; j < MNTiles; j += blockSize, localT += K*64) {
     int aBlockBytes = (j/NTiles)<<6;
     int bBlockBytes = (j%NTiles)<<6;
     a = A + aBlockBytes;
@@ -491,7 +492,7 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, c
       ((aBlockBytes*N+bBlockBytes)>>2)/N, ((aBlockBytes*+bBlockBytes)>>2)%N
     );
 #endif
-    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params, T));
+    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params, localT));
   }
   for (auto &th: threads) {
     th.join();

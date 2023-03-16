@@ -55,7 +55,7 @@ void check(float *X, float *Y, int M, int N) {
 }
 
 int main(int argc, char**argv) {
-  if (!(argc == 7 || argc == 8)) {
+  if (!(argc >= 6 && argc <= 8)) {
     printf("Usage: %s M N K check numTries [seed] [numThreads]\n", argv[0]);
     return 1;
   }
@@ -79,7 +79,7 @@ int main(int argc, char**argv) {
   float *B = new float[N*K];
   float *C = new float[M*N];
   float *D = new float[M*N];
-  float *T = new float[K*16];
+  float *T = new float[K*16*numThreads];
   initialize(A, K, M);
   initialize(B, K, N);
   initialize(C, M, N);
@@ -101,8 +101,6 @@ int main(int argc, char**argv) {
   std::chrono::duration<double> diff = end - start;
 
   printf("%d %d %d: %f GFLOPS, %f us\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f), diff.count()*(1e6)/numTries);
-
-  printf("%d\n", isCheck);
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);
