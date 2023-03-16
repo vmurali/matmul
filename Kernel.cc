@@ -232,7 +232,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
-      //useT = true;
+      useT = true;
     }
     {
       if (params->NRemainder != 0) {
@@ -385,7 +385,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
-      //useT = true;
+      useT = true;
     }
     {
       if (NMask != 0) {
