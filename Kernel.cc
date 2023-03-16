@@ -143,7 +143,7 @@ void printInts(char *str, __m512i x) {
 } ((void)0)
 
 void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
-           MMF32Params *params) {
+           MMF32Params *params, char *T) {
   int NBytes = params->NBytes;
 
   char* c[16] = {cCurr, cCurr+NBytes, cCurr+2*NBytes, cCurr+3*NBytes,
@@ -163,10 +163,14 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
 
   char *a = aCurr;
   char *b = bCurr;
+  bool useT;
+  char *TAddr;
   for (; a < params->ARowChunkEnd; a += 64) {
+    useT = false;
     for (; b < params->BRowChunkEnd; b += 64) {
       char* kA = a;
       char* kB = b;
+      TAddr = T;
       register __m512 c0 = _mm512_loadu_ps(c[0]);
       register __m512 c1 = _mm512_loadu_ps(c[1]);
       register __m512 c2 = _mm512_loadu_ps(c[2]);
@@ -190,8 +194,16 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
 	print(params->A, params->B, params->C, params->M, params->N, params->K,
               kA, kB, c, 0xFFFF, 0xFFFF);
 #endif
+        register __m512 kAVal;
+        if (useT) {
+          kAVal = _mm512_loadu_ps(TAddr);
+        } else {
+          kAVal = _mm512_loadu_ps(kA);
+          _mm512_storeu_ps(TAddr, kAVal);
+        }
+        TAddr += 64;
         mm_16x16_f32(
-	  _mm512_loadu_ps(kA), _mm512_loadu_ps(kB),
+	  kAVal, _mm512_loadu_ps(kB),
           c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
           broadcastIdx, ones);
       }
@@ -220,11 +232,13 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
+      //useT = true;
     }
     {
       if (params->NRemainder != 0) {
         char* kA = a;
         char* kB = b;
+        TAddr = T;
         register __m512 c0 = _mm512_maskz_loadu_ps(nMask, c[0]);
         register __m512 c1 = _mm512_maskz_loadu_ps(nMask, c[1]);
         register __m512 c2 = _mm512_maskz_loadu_ps(nMask, c[2]);
@@ -248,8 +262,16 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
           print(params->A, params->B, params->C, params->M, params->N,
                 params->K, kA, kB, c, 0xFFFF, nMask);
 #endif  
+          register __m512 kAVal;
+          if (useT) {
+            kAVal = _mm512_loadu_ps(TAddr);
+          } else {
+            kAVal = _mm512_loadu_ps(kA);
+            _mm512_storeu_ps(TAddr, kAVal);
+          }
+          TAddr += 64;
           mm_16x16_f32(
-            _mm512_loadu_ps(kA), _mm512_maskz_loadu_ps(nMask, kB),
+            kAVal, _mm512_maskz_loadu_ps(nMask, kB),
             c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
             broadcastIdx, ones);
         }
@@ -284,9 +306,11 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
   int MRemainder = params->MRemainder;
   if (MRemainder != 0) {
+    useT = false;  
     for (; b < params->BRowChunkEnd; b += 64) {
       char* kA = a;
       char* kB = b;
+      TAddr = T;
       register __m512 c0 = _mm512_loadu_ps(c[0]);
       register __m512 c1;
       register __m512 c2;
@@ -324,8 +348,16 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
         print(params->A, params->B, params->C, params->M, params->N, params->K,
               kA, kB, c, mMask, 0xFFFF);
 #endif
+        register __m512 kAVal;
+        if (useT) {
+          kAVal = _mm512_maskz_loadu_ps(mMask, TAddr);
+        } else {
+          kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+          _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
+        }
+        TAddr += 64;
         mm_16x16_f32(
-	  _mm512_maskz_loadu_ps(mMask, kA), _mm512_loadu_ps(kB),
+	  kAVal, _mm512_loadu_ps(kB),
           c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
           broadcastIdx, ones);
       }
@@ -353,11 +385,13 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
+      //useT = true;
     }
     {
       if (NMask != 0) {
         char* kA = a;
         char* kB = b;
+        TAddr = T;
         register __m512 c0 = _mm512_maskz_loadu_ps(nMask, c[0]);
         register __m512 c1;
         register __m512 c2;
@@ -395,8 +429,16 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
           print(params->A, params->B, params->C, params->M, params->N,
                 params->K, kA, kB, c, mMask, nMask);
 #endif  
+          register __m512 kAVal;
+          if (useT) {
+            kAVal = _mm512_maskz_loadu_ps(mMask, TAddr);
+          } else {
+            kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+            _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
+          }
+          TAddr += 64;
           mm_16x16_f32(
-            _mm512_maskz_loadu_ps(mMask, kA), _mm512_maskz_loadu_ps(nMask, kB),
+            kAVal, _mm512_maskz_loadu_ps(nMask, kB),
             c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
             broadcastIdx, ones);
         }
@@ -421,7 +463,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
 }
 
-void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char *T) {
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
@@ -436,7 +478,8 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
 #ifdef DEBUG
   printf("blockSize: %d, MTiles: %d, NTiles: %d\n", blockSize, MTiles, NTiles);
 #endif
-  for (int j = 0; j < MNTiles; j += blockSize) {
+  char *localT = T;
+  for (int j = 0; j < MNTiles; j += blockSize, localT += K*64) {
     int aBlockBytes = (j/NTiles)<<6;
     int bBlockBytes = (j%NTiles)<<6;
     a = A + aBlockBytes;
@@ -449,7 +492,7 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads) {
       ((aBlockBytes*N+bBlockBytes)>>2)/N, ((aBlockBytes*+bBlockBytes)>>2)%N
     );
 #endif
-    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params));
+    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params, localT));
   }
   for (auto &th: threads) {
     th.join();

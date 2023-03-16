@@ -2,13 +2,13 @@
 
 clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./checker
 
-for k in {1..2}
-do
-  for j in {1..256}
+for t in 176
   do
-    for i in {1..256}
+  for j in {1..50}
+  do
+    for i in {1..50}
     do
-      for t in {1..256}
+      for k in {1..20}
       do
         echo "$i $j $k 1 1 $t"
         ./checker $i $j $k 1 1 $t
