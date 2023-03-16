@@ -55,8 +55,8 @@ void check(float *X, float *Y, int M, int N) {
 }
 
 int main(int argc, char**argv) {
-  if (!(argc == 6 || argc == 7)) {
-    printf("Usage: %s M N K check numTries [numThreads]\n", argv[0]);
+  if (!(argc == 7 || argc == 8)) {
+    printf("Usage: %s M N K check numTries [seed] [numThreads]\n", argv[0]);
     return 1;
   }
   const int M = atoi(argv[1]);
@@ -64,15 +64,22 @@ int main(int argc, char**argv) {
   const int K = atoi(argv[3]);
   int isCheck = atoi(argv[4]);
   const int numTries = atoi(argv[5]);
-  if (numTries > 0)
+  if (numTries > 1)
     isCheck = 0;
+  int seed = time(NULL);
+  if (argc >= 7 && atoi(argv[6]) != 0)
+    seed = atoi(argv[6]);
+  printf("Seed: %d\n", seed);
+  srand(seed);
   int numThreads = std::thread::hardware_concurrency();
-  if (argc == 7 && atoi(argv[6]) != 0)
-    numThreads = atoi(argv[6]);
+  if (argc == 8 && atoi(argv[7]) != 0)
+    numThreads = atoi(argv[7]);
+
   float *A = new float[M*K];
   float *B = new float[N*K];
   float *C = new float[M*N];
   float *D = new float[M*N];
+  float *T = new float[K*16];
   initialize(A, K, M);
   initialize(B, K, N);
   initialize(C, M, N);
@@ -88,12 +95,14 @@ int main(int argc, char**argv) {
 
   auto start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < numTries; i++) {
-    MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads);
+    MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, (char*)T);
   }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> diff = end - start;
 
   printf("%d %d %d: %f GFLOPS, %f us\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f), diff.count()*(1e6)/numTries);
+
+  printf("%d\n", isCheck);
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);
