@@ -93,7 +93,7 @@ int main(int argc, char**argv) {
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> diff = end - start;
 
-  printf("%d %d %d: %f GFLOPS\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f));
+  printf("%d %d %d: %f GFLOPS, %f us\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f), diff.count()*(1e6)/numTries);
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);
