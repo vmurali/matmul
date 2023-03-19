@@ -1,3 +1,8 @@
+#ifndef KERNEL
+#define KERNEL
+
+#include "ThreadPool.h"
+
 #include <vector>
 
 struct MMF32Params {
@@ -28,5 +33,7 @@ struct MMF32Params {
       AEnd(A + (MBytes*K)) {}
 };
 
+void MMF32(char* A, char* B, char* C, int blockSize, MMF32Params *params, char* T);
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char* T, ThreadPool& threadPool);
 
-void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char* T);
+#endif

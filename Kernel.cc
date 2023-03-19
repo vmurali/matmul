@@ -1,4 +1,5 @@
 #include "Kernel.h"
+#include "ThreadPool.h"
 
 #include <immintrin.h>
 #include <thread>
@@ -466,7 +467,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
 }
 
-void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char *T) {
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char *T, ThreadPool& threadPool) {
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
@@ -495,8 +496,10 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, c
       ((aBlockBytes*N+bBlockBytes)>>2)/N, ((aBlockBytes*+bBlockBytes)>>2)%N
     );
 #endif
+    //threadPool.QueueJob(a, b, c, blockSize, &params, localT);
     threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params, localT));
   }
+  //threadPool.WaitDone();
   for (auto &th: threads) {
     th.join();
   }

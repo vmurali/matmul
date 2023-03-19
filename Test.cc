@@ -1,7 +1,9 @@
 #include "Kernel.h"
+#include "ThreadPool.h"
 
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <thread>
 
 #ifdef DEBUG
@@ -19,7 +21,7 @@ void print_mm(float *X, int M, int N) {
 void initialize(float *X, int M, int N) {
   for (int i = 0; i < M; i++) {
     for (int j = 0; j < N; j++) {
-      X[i*N+j] = rand()%10;
+      X[i*N+j] = 0; //rand()%10;
     }
   }
 }
@@ -55,25 +57,21 @@ void check(float *X, float *Y, int M, int N) {
 }
 
 int main(int argc, char**argv) {
-  if (!(argc >= 6 && argc <= 8)) {
-    printf("Usage: %s M N K check numTries [seed] [numThreads]\n", argv[0]);
+  if (!(argc >= 5 && argc <= 7)) {
+    printf("Usage: %s M N K check [numThreads] [seed]\n", argv[0]);
     return 1;
   }
   const int M = atoi(argv[1]);
   const int N = atoi(argv[2]);
   const int K = atoi(argv[3]);
   int isCheck = atoi(argv[4]);
-  const int numTries = atoi(argv[5]);
-  if (numTries > 1)
-    isCheck = 0;
+  int numThreads = std::thread::hardware_concurrency()-1;
+  if (argc >= 6 && atoi(argv[5]) != 0)
+    numThreads = atoi(argv[5]);
   int seed = time(NULL);
-  if (argc >= 7 && atoi(argv[6]) != 0)
+  if (argc == 7 && atoi(argv[6]) != 0)
     seed = atoi(argv[6]);
-  printf("Seed: %d\n", seed);
   srand(seed);
-  int numThreads = std::thread::hardware_concurrency();
-  if (argc == 8 && atoi(argv[7]) != 0)
-    numThreads = atoi(argv[7]);
 
   float *A = new float[M*K];
   float *B = new float[N*K];
@@ -93,14 +91,19 @@ int main(int argc, char**argv) {
   print_mm(C, M, N);
 #endif
 
-  auto start = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < numTries; i++) {
-    MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, (char*)T);
-  }
-  auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> diff = end - start;
+  ThreadPool threadPool(numThreads);
 
-  printf("%d %d %d: %f GFLOPS, %f us\n", M, N, K, (long long)M*N*K*2*numTries/diff.count()*(1e-9f), diff.count()*(1e6)/numTries);
+  struct timespec start;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
+  MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, (char*)T, threadPool);
+
+  struct timespec end;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
+
+  long long diff = (end.tv_sec - start.tv_sec) * (long long)1e9 + (end.tv_nsec - start.tv_nsec);
+
+  printf("%d\t%d\t%d\t%lld\t%d\n", M, N, K, diff, numThreads);
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);

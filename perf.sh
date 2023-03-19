@@ -1,22 +1,17 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 Kernel.cc Test.cc -o ./perf
+clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 ThreadPool.cc Kernel.cc Test.cc -o ./perf
 
-./perf 384 128 512 0 10
-./perf 384 512 128 0 10
-./perf 384 384 32 0 10
-./perf 384 32 384 0 10
-./perf 384 128 128 0 10
-./perf 384 512 384 0 10
-./perf 384 2 512 0 10
-
-for i in {1..14}
+for i in {5..15}
 do
-  n=$((1<<i))
-  nadd=$((n+1))
-  nsub=$((n-1))
-  ./perf $n $n $n 0 10
-  ./perf $nadd $nadd $nadd 0 10
-  ./perf $nsub $nsub $nsub 0 10
+  m=$((1<<i))
+  n=$m
+  k=$m
+  for maxt in 1 #2 4 6 8 16 32
+  do
+    ./perf $m $n $k 0 $maxt
+    ./perf $((m+1)) $((n+1)) $((k+1)) 0 $maxt
+    ./perf $((m-1)) $((n-1)) $((k-1)) 0 $maxt
+  done
 done
 
