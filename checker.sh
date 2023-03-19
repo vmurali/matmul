@@ -1,6 +1,7 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 ThreadPool.cc Kernel.cc Test.cc -o ./checker
+make
+cp a.out checker
 
 for t in 176
   do

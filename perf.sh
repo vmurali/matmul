@@ -1,6 +1,7 @@
 #!/bin/bash
 
-clang++ -Wno-deprecated-register -mavx512f -lpthread -O3 ThreadPool.cc Kernel.cc Test.cc -o ./perf
+make
+cp a.out perf
 
 for i in {5..15}
 do
