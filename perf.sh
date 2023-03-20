@@ -1,9 +1,9 @@
 #!/bin/bash
 
-make
+makea >& /dev/null
 cp a.out perf
 
-for i in {5..15}
+for i in {5..14}
 do
   m=$((1<<i))
   n=$m
