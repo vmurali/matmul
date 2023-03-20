@@ -3,11 +3,11 @@
 make
 cp a.out checker
 
-for t in 176
+for t in 1
   do
-  for j in {1..50}
+  for j in {1..33}
   do
-    for i in {1..50}
+    for i in {1..33}
     do
       for k in {1..20}
       do

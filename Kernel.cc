@@ -65,42 +65,62 @@ void printInts(char *str, __m512i x) {
   a, \
   b, \
   c, \
-  broadcastIdx, \
-  ones \
+  offset \
 ) \
-  printInts("Idx", broadcastIdx); \
-  printFloats("Ain", a); \
   printFloats("Cin", c); \
-  { \
-    __m512 temp; \
-    asm volatile( \
-      "vpermd %3, %1, %2;" \
-      "vfmadd231ps  %4, %2, %0;" \
-      "vpaddd %1, %5, %1;" \
-      : "+v&"(c), "+v&"(broadcastIdx), "=v&"(temp) \
-      : "v"(a), "v"(b), "v"(ones) \
-      : \
-    ); \
-    printFloats("Tmp", temp); \
-    printFloats("Bin", b); \
-    printFloats("Cot", c); \
-  } \
-  printInts("One", ones)
+  asm volatile( \
+    "vfmadd231ps " #offset "(%1), %2, %0;" \
+    : "+v&"(c) \
+    : "r"(a), "v"(b) \
+    : \
+  ); \
+  printFloats("Bin", b); \
+  printFloats("Cot", c)
+
+#define broadcast_fma_incrementIdx_16_f32_mask( \
+  a, \
+  b, \
+  c, \
+  offset, \
+  mask \
+) \
+  printFloats("Cin", c); \
+  asm volatile( \
+    "vfmadd231ps " #offset "(%1), %2, %0 %{%3%}%{z%};" \
+    : "+v&"(c) \
+    : "r"(a), "v"(b), "Yk"(mask) \
+    : \
+  ); \
+  printFloats("Bin", b); \
+  printFloats("Cot", c)
+
 #else
 #define broadcast_fma_incrementIdx_16_f32( \
   a, \
   b, \
   c, \
-  broadcastIdx, \
-  ones \
+  offset \
 ) \
   asm volatile( \
-    "vpermd %2, %1, %%zmm0;" \
-    "vfmadd231ps  %3, %%zmm0, %0;" \
-    "vpaddd %1, %4, %1;" \
-    : "+v&"(c), "+v&"(broadcastIdx) \
-    : "v"(a), "v"(b), "v"(ones) \
-    : "zmm0")
+    "vfmadd231ps " #offset "(%1), %2, %0;" \
+    : "+v&"(c) \
+    : "r"(a), "v"(b) \
+    : \
+  )
+
+#define broadcast_fma_incrementIdx_16_f32_mask( \
+  a, \
+  b, \
+  c, \
+  offset, \
+  mask \
+) \
+  asm volatile( \
+    "vfmadd231ps " #offset "(%1), %2, %0 %{%3%}%{z%};" \
+    : "+v&"(c) \
+    : "r"(a), "v"(b), "Yk"(mask) \
+    : \
+  )
 #endif
 
 #define mm_16x16_f32( \
@@ -121,26 +141,62 @@ void printInts(char *str, __m512i x) {
   cC, \
   cD, \
   cE, \
-  cF, \
-  broadcastIdx, \
-  ones \
+  cF \
 ) \
-  broadcast_fma_incrementIdx_16_f32(a, b, c0, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c1, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c2, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c3, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c4, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c5, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c6, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c7, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c8, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, c9, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cA, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cB, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cC, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cD, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cE, broadcastIdx, ones); \
-  broadcast_fma_incrementIdx_16_f32(a, b, cF, broadcastIdx, ones)
+  broadcast_fma_incrementIdx_16_f32(a, b, c0, 0); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c1, 4); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c2, 8); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c3, 12); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c4, 16); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c5, 20); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c6, 24); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c7, 28); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c8, 32); \
+  broadcast_fma_incrementIdx_16_f32(a, b, c9, 36); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cA, 40); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cB, 44); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cC, 48); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cD, 52); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cE, 56); \
+  broadcast_fma_incrementIdx_16_f32(a, b, cF, 60)
+
+#define mm_16x16_f32_mask( \
+  a, \
+  b, \
+  c0, \
+  c1, \
+  c2, \
+  c3, \
+  c4, \
+  c5, \
+  c6, \
+  c7, \
+  c8, \
+  c9, \
+  cA, \
+  cB, \
+  cC, \
+  cD, \
+  cE, \
+  cF, \
+  mask \
+) \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c0, 0, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c1, 4, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c2, 8, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c3, 12, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c4, 16, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c5, 20, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c6, 24, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c7, 28, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c8, 32, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, c9, 36, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cA, 40, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cB, 44, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cC, 48, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cD, 52, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cE, 56, mask); \
+  broadcast_fma_incrementIdx_16_f32_mask(a, b, cF, 60, mask)
 
 void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
            MMF32Params *params, char *T) {
@@ -158,8 +214,6 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
 
   register __mmask16 mMask = _mm512_int2mask(MMask);
   register __mmask16 nMask = _mm512_int2mask(NMask);
-  register __m512i broadcastIdx = _mm512_setzero_epi32();
-  register const __m512i ones = _mm512_loadu_epi32(params->onesMem);
 
   char *a = aCurr;
   char *b = bCurr;
@@ -194,19 +248,20 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
 	print(params->A, params->B, params->C, params->M, params->N, params->K,
               kA, kB, c, 0xFFFF, 0xFFFF);
 #endif
-        register __m512 kAVal, kBVal;
+        register __m512 kBVal;
+        char *vA;
         if (useT) {
-          kAVal = _mm512_loadu_ps(TAddr);
+          vA = TAddr;
         } else {
-          kAVal = _mm512_loadu_ps(kA);
+          register __m512 kAVal = _mm512_loadu_ps(kA);
+          vA = kA;
           _mm512_storeu_ps(TAddr, kAVal);
         }
         TAddr += 64;
         kBVal = _mm512_loadu_ps(kB);
         mm_16x16_f32(
-	  kAVal, kBVal,
-          c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-          broadcastIdx, ones);
+	  vA, kBVal,
+          c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF);
       }
 
       _mm512_storeu_ps(c[0], c0);
@@ -263,19 +318,20 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
           print(params->A, params->B, params->C, params->M, params->N,
                 params->K, kA, kB, c, 0xFFFF, nMask);
 #endif  
-          register __m512 kAVal, kBVal;
+          register __m512 kBVal;
+          char *vA;
           if (useT) {
-            kAVal = _mm512_loadu_ps(TAddr);
+            vA = TAddr;
           } else {
-            kAVal = _mm512_loadu_ps(kA);
+            register __m512 kAVal = _mm512_loadu_ps(kA);
+            vA = kA;
             _mm512_storeu_ps(TAddr, kAVal);
           }
           TAddr += 64;
           kBVal = _mm512_maskz_loadu_ps(nMask, kB);
           mm_16x16_f32(
-            kAVal, kBVal,
-            c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-            broadcastIdx, ones);
+            vA, kBVal,
+            c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF);
         }
 
         _mm512_mask_storeu_ps(c[0], nMask, c0);
@@ -350,19 +406,21 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
         print(params->A, params->B, params->C, params->M, params->N, params->K,
               kA, kB, c, mMask, 0xFFFF);
 #endif
-        register __m512 kAVal, kBVal;
+        register __m512 kBVal;
+        char *vA;
         if (useT) {
-          kAVal = _mm512_maskz_loadu_ps(mMask, TAddr);
+          vA = TAddr;
         } else {
-          kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+          register __m512 kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+          vA = kA;
           _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
         }
         TAddr += 64;
         kBVal = _mm512_loadu_ps(kB);
-        mm_16x16_f32(
-	  kAVal, kBVal,
+        mm_16x16_f32_mask(
+	  vA, kBVal,
           c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-          broadcastIdx, ones);
+          mMask);
       }
 
       _mm512_storeu_ps(c[0], c0);
@@ -432,19 +490,21 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
           print(params->A, params->B, params->C, params->M, params->N,
                 params->K, kA, kB, c, mMask, nMask);
 #endif  
-          register __m512 kAVal, kBVal;
+          register __m512 kBVal;
+          char *vA;       
           if (useT) {
-            kAVal = _mm512_maskz_loadu_ps(mMask, TAddr);
+            vA = TAddr;
           } else {
-            kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+            register __m512 kAVal = _mm512_maskz_loadu_ps(mMask, kA);
+            vA = kA;
             _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
           }
           TAddr += 64;
           kBVal = _mm512_maskz_loadu_ps(nMask, kB);
-          mm_16x16_f32(
-            kAVal, kBVal,
+          mm_16x16_f32_mask(
+            vA, kBVal,
             c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-            broadcastIdx, ones);
+            mMask);
         }
 
         _mm512_mask_storeu_ps(c[0], nMask, c0);
