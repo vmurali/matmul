@@ -28,7 +28,7 @@ void ThreadPool::ThreadLoop() {
       job = jobs.front();
       jobs.pop();
     }
-    MMF32(job.a, job.b, job.c, job.blockSize, job.params, job.T);
+    MMF32(job.a, job.b, job.c, job.blockSize, job.params);
     {
       std::unique_lock<std::mutex> lock(mutexLock);
       leftCount--;
@@ -54,10 +54,10 @@ void ThreadPool::WaitDone() {
 }
 
 void ThreadPool::QueueJob(char *a, char *b, char *c, int blockSize,
-                          MMF32Params *params, char *T) {
+                          MMF32Params *params) {
   {
     std::unique_lock<std::mutex> lock(mutexLock);
-    jobs.push(MMF32FullParams{a, b, c, blockSize, params, T});
+    jobs.push(MMF32FullParams{a, b, c, blockSize, params});
     leftCount++;
   }
   cond.notify_one();

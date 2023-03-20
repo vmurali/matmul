@@ -199,7 +199,7 @@ void printInts(char *str, __m512i x) {
   broadcast_fma_incrementIdx_16_f32_mask(a, b, cF, 60, mask)
 
 void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
-           MMF32Params *params, char *T) {
+           MMF32Params *params) {
   int NBytes = params->NBytes;
 
   char* c[16] = {cCurr, cCurr+NBytes, cCurr+2*NBytes, cCurr+3*NBytes,
@@ -207,24 +207,13 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
     cCurr+8*NBytes, cCurr+9*NBytes, cCurr+10*NBytes, cCurr+11*NBytes,
     cCurr+12*NBytes, cCurr+13*NBytes, cCurr+14*NBytes, cCurr+15*NBytes};
 
-  unsigned short MMask = ~(((unsigned short)0xFFFF) <<
-                               ((unsigned short)(params->MRemainder)));
-  unsigned short NMask = ~(((unsigned short)0xFFFF) <<
-                               ((unsigned short)(params->NRemainder)));
-
-  register __mmask16 mMask = _mm512_int2mask(MMask);
-  register __mmask16 nMask = _mm512_int2mask(NMask);
-
   char *a = aCurr;
   char *b = bCurr;
-  bool useT;
-  char *TAddr;
-  for (; a < params->ARowChunkEnd; a += 64) {
-    useT = false;
-    for (; b < params->BRowChunkEnd; b += 64) {
+  int KRowsBytes = params->KRowsBytes;
+  for (; a < params->AChunkEnd; a += KRowsBytes) {
+    for (; b < params->BChunkEnd; b += KRowsBytes) {
       char* kA = a;
       char* kB = b;
-      TAddr = T;
       register __m512 c0 = _mm512_loadu_ps(c[0]);
       register __m512 c1 = _mm512_loadu_ps(c[1]);
       register __m512 c2 = _mm512_loadu_ps(c[2]);
@@ -242,7 +231,7 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       register __m512 cE = _mm512_loadu_ps(c[14]);
       register __m512 cF = _mm512_loadu_ps(c[15]);
 
-      for (; kA < params->AEnd; kA += params->MBytes, kB += params->NBytes) {
+      for (; kA < a + KRowsBytes; kA += 64, kB += 64) {
 #ifdef DEBUG
         printf("Both good: ");
 	print(params->A, params->B, params->C, params->M, params->N, params->K,
@@ -250,20 +239,12 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
 #endif
         register __m512 kBVal;
         char *vA;
-        if (useT) {
-          vA = TAddr;
-        } else {
-          register __m512 kAVal = _mm512_loadu_ps(kA);
-          vA = kA;
-          _mm512_storeu_ps(TAddr, kAVal);
-        }
-        TAddr += 64;
+        vA = kA;
         kBVal = _mm512_loadu_ps(kB);
         mm_16x16_f32(
 	  vA, kBVal,
           c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF);
       }
-
       _mm512_storeu_ps(c[0], c0);
       _mm512_storeu_ps(c[1], c1);
       _mm512_storeu_ps(c[2], c2);
@@ -280,275 +261,40 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
       _mm512_storeu_ps(c[13], cD);
       _mm512_storeu_ps(c[14], cE);
       _mm512_storeu_ps(c[15], cF);
-
       blockSize--;
-      if (blockSize == 0)
+      if (blockSize == 0) {
         return;
+      }
 
       for (int i = 0; i < 16; i++) {
         c[i] += 64;
       }
-      useT = true;
     }
-    {
-      if (params->NRemainder != 0) {
-        char* kA = a;
-        char* kB = b;
-        TAddr = T;
-        register __m512 c0 = _mm512_maskz_loadu_ps(nMask, c[0]);
-        register __m512 c1 = _mm512_maskz_loadu_ps(nMask, c[1]);
-        register __m512 c2 = _mm512_maskz_loadu_ps(nMask, c[2]);
-        register __m512 c3 = _mm512_maskz_loadu_ps(nMask, c[3]);
-        register __m512 c4 = _mm512_maskz_loadu_ps(nMask, c[4]);
-        register __m512 c5 = _mm512_maskz_loadu_ps(nMask, c[5]);
-        register __m512 c6 = _mm512_maskz_loadu_ps(nMask, c[6]);
-        register __m512 c7 = _mm512_maskz_loadu_ps(nMask, c[7]);
-        register __m512 c8 = _mm512_maskz_loadu_ps(nMask, c[8]);
-        register __m512 c9 = _mm512_maskz_loadu_ps(nMask, c[9]);
-        register __m512 cA = _mm512_maskz_loadu_ps(nMask, c[10]);
-        register __m512 cB = _mm512_maskz_loadu_ps(nMask, c[11]);
-        register __m512 cC = _mm512_maskz_loadu_ps(nMask, c[12]);
-        register __m512 cD = _mm512_maskz_loadu_ps(nMask, c[13]);
-        register __m512 cE = _mm512_maskz_loadu_ps(nMask, c[14]);
-        register __m512 cF = _mm512_maskz_loadu_ps(nMask, c[15]);
-
-        for (; kA < params->AEnd; kA += params->MBytes, kB += params->NBytes) {
-#ifdef DEBUG
-          printf("AAAA good: ");
-          print(params->A, params->B, params->C, params->M, params->N,
-                params->K, kA, kB, c, 0xFFFF, nMask);
-#endif  
-          register __m512 kBVal;
-          char *vA;
-          if (useT) {
-            vA = TAddr;
-          } else {
-            register __m512 kAVal = _mm512_loadu_ps(kA);
-            vA = kA;
-            _mm512_storeu_ps(TAddr, kAVal);
-          }
-          TAddr += 64;
-          kBVal = _mm512_maskz_loadu_ps(nMask, kB);
-          mm_16x16_f32(
-            vA, kBVal,
-            c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF);
-        }
-
-        _mm512_mask_storeu_ps(c[0], nMask, c0);
-        _mm512_mask_storeu_ps(c[1], nMask, c1);
-        _mm512_mask_storeu_ps(c[2], nMask, c2);
-        _mm512_mask_storeu_ps(c[3], nMask, c3);
-        _mm512_mask_storeu_ps(c[4], nMask, c4);
-        _mm512_mask_storeu_ps(c[5], nMask, c5);
-        _mm512_mask_storeu_ps(c[6], nMask, c6);
-        _mm512_mask_storeu_ps(c[7], nMask, c7);
-        _mm512_mask_storeu_ps(c[8], nMask, c8);
-        _mm512_mask_storeu_ps(c[9], nMask, c9);
-        _mm512_mask_storeu_ps(c[10], nMask, cA);
-        _mm512_mask_storeu_ps(c[11], nMask, cB);
-        _mm512_mask_storeu_ps(c[12], nMask, cC);
-        _mm512_mask_storeu_ps(c[13], nMask, cD);
-        _mm512_mask_storeu_ps(c[14], nMask, cE);
-        _mm512_mask_storeu_ps(c[15], nMask, cF);
-
-        blockSize--;
-        if (blockSize == 0)
-          return;
-      }
-
-      for (int i = 0; i < 16; i++) {
-        c[i] += params->CIncEndRow;
-      }
-      b = params->B;
+    for (int i = 0; i < 16; i++) {
+      c[i] += params->CIncEndRow;
     }
-  }
-  int MRemainder = params->MRemainder;
-  if (MRemainder != 0) {
-    useT = false;  
-    for (; b < params->BRowChunkEnd; b += 64) {
-      char* kA = a;
-      char* kB = b;
-      TAddr = T;
-      register __m512 c0 = _mm512_loadu_ps(c[0]);
-      register __m512 c1;
-      register __m512 c2;
-      register __m512 c3;
-      register __m512 c4;
-      register __m512 c5;
-      register __m512 c6;
-      register __m512 c7;
-      register __m512 c8;
-      register __m512 c9;
-      register __m512 cA;
-      register __m512 cB;
-      register __m512 cC;
-      register __m512 cD;
-      register __m512 cE;
-      register __m512 cF;
-      if (MRemainder > 1) c1 = _mm512_loadu_ps(c[1]);
-      if (MRemainder > 2) c2 = _mm512_loadu_ps(c[2]);
-      if (MRemainder > 3) c3 = _mm512_loadu_ps(c[3]);
-      if (MRemainder > 4) c4 = _mm512_loadu_ps(c[4]);
-      if (MRemainder > 5) c5 = _mm512_loadu_ps(c[5]);
-      if (MRemainder > 6) c6 = _mm512_loadu_ps(c[6]);
-      if (MRemainder > 7) c7 = _mm512_loadu_ps(c[7]);
-      if (MRemainder > 8) c8 = _mm512_loadu_ps(c[8]);
-      if (MRemainder > 9) c9 = _mm512_loadu_ps(c[9]);
-      if (MRemainder > 10) cA = _mm512_loadu_ps(c[10]);
-      if (MRemainder > 11) cB = _mm512_loadu_ps(c[11]);
-      if (MRemainder > 12) cC = _mm512_loadu_ps(c[12]);
-      if (MRemainder > 13) cD = _mm512_loadu_ps(c[13]);
-      if (MRemainder > 14) cE = _mm512_loadu_ps(c[14]);
-
-      for (; kA < params->AEnd; kA += params->MBytes, kB += params->NBytes) {
-#ifdef DEBUG
-        printf("BBBB good: ");
-        print(params->A, params->B, params->C, params->M, params->N, params->K,
-              kA, kB, c, mMask, 0xFFFF);
-#endif
-        register __m512 kBVal;
-        char *vA;
-        if (useT) {
-          vA = TAddr;
-        } else {
-          register __m512 kAVal = _mm512_maskz_loadu_ps(mMask, kA);
-          vA = kA;
-          _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
-        }
-        TAddr += 64;
-        kBVal = _mm512_loadu_ps(kB);
-        mm_16x16_f32_mask(
-	  vA, kBVal,
-          c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-          mMask);
-      }
-
-      _mm512_storeu_ps(c[0], c0);
-      if (MRemainder > 1) _mm512_storeu_ps(c[1], c1);
-      if (MRemainder > 2) _mm512_storeu_ps(c[2], c2);
-      if (MRemainder > 3) _mm512_storeu_ps(c[3], c3);
-      if (MRemainder > 4) _mm512_storeu_ps(c[4], c4);
-      if (MRemainder > 5) _mm512_storeu_ps(c[5], c5);
-      if (MRemainder > 6) _mm512_storeu_ps(c[6], c6);
-      if (MRemainder > 7) _mm512_storeu_ps(c[7], c7);
-      if (MRemainder > 8) _mm512_storeu_ps(c[8], c8);
-      if (MRemainder > 9) _mm512_storeu_ps(c[9], c9);
-      if (MRemainder > 10) _mm512_storeu_ps(c[10], cA);
-      if (MRemainder > 11) _mm512_storeu_ps(c[11], cB);
-      if (MRemainder > 12) _mm512_storeu_ps(c[12], cC);
-      if (MRemainder > 13) _mm512_storeu_ps(c[13], cD);
-      if (MRemainder > 14) _mm512_storeu_ps(c[14], cE);
-
-      blockSize--;
-      if (blockSize == 0)
-        return;
-
-      for (int i = 0; i < 16; i++) {
-        c[i] += 64;
-      }
-      useT = true;
-    }
-    {
-      if (NMask != 0) {
-        char* kA = a;
-        char* kB = b;
-        TAddr = T;
-        register __m512 c0 = _mm512_maskz_loadu_ps(nMask, c[0]);
-        register __m512 c1;
-        register __m512 c2;
-        register __m512 c3;
-        register __m512 c4;
-        register __m512 c5;
-        register __m512 c6;
-        register __m512 c7;
-        register __m512 c8;
-        register __m512 c9;
-        register __m512 cA;
-        register __m512 cB;
-        register __m512 cC;
-        register __m512 cD;
-        register __m512 cE;
-        register __m512 cF;
-        if (MRemainder > 1) c1 = _mm512_maskz_loadu_ps(nMask, c[1]);
-        if (MRemainder > 2) c2 = _mm512_maskz_loadu_ps(nMask, c[2]);
-        if (MRemainder > 3) c3 = _mm512_maskz_loadu_ps(nMask, c[3]);
-        if (MRemainder > 4) c4 = _mm512_maskz_loadu_ps(nMask, c[4]);
-        if (MRemainder > 5) c5 = _mm512_maskz_loadu_ps(nMask, c[5]);
-        if (MRemainder > 6) c6 = _mm512_maskz_loadu_ps(nMask, c[6]);
-        if (MRemainder > 7) c7 = _mm512_maskz_loadu_ps(nMask, c[7]);
-        if (MRemainder > 8) c8 = _mm512_maskz_loadu_ps(nMask, c[8]);
-        if (MRemainder > 9) c9 = _mm512_maskz_loadu_ps(nMask, c[9]);
-        if (MRemainder > 10) cA = _mm512_maskz_loadu_ps(nMask, c[10]);
-        if (MRemainder > 11) cB = _mm512_maskz_loadu_ps(nMask, c[11]);
-        if (MRemainder > 12) cC = _mm512_maskz_loadu_ps(nMask, c[12]);
-        if (MRemainder > 13) cD = _mm512_maskz_loadu_ps(nMask, c[13]);
-        if (MRemainder > 14) cE = _mm512_maskz_loadu_ps(nMask, c[14]);
-
-        for (; kA < params->AEnd; kA += params->MBytes, kB += params->NBytes) {
-#ifdef DEBUG
-          printf("None good: ");
-          print(params->A, params->B, params->C, params->M, params->N,
-                params->K, kA, kB, c, mMask, nMask);
-#endif  
-          register __m512 kBVal;
-          char *vA;       
-          if (useT) {
-            vA = TAddr;
-          } else {
-            register __m512 kAVal = _mm512_maskz_loadu_ps(mMask, kA);
-            vA = kA;
-            _mm512_mask_storeu_ps(TAddr, mMask, kAVal);
-          }
-          TAddr += 64;
-          kBVal = _mm512_maskz_loadu_ps(nMask, kB);
-          mm_16x16_f32_mask(
-            vA, kBVal,
-            c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, cA, cB, cC, cD, cE, cF,
-            mMask);
-        }
-
-        _mm512_mask_storeu_ps(c[0], nMask, c0);
-        if (MRemainder > 1) _mm512_mask_storeu_ps(c[1], nMask, c1);
-        if (MRemainder > 2) _mm512_mask_storeu_ps(c[2], nMask, c2);
-        if (MRemainder > 3) _mm512_mask_storeu_ps(c[3], nMask, c3);
-        if (MRemainder > 4) _mm512_mask_storeu_ps(c[4], nMask, c4);
-        if (MRemainder > 5) _mm512_mask_storeu_ps(c[5], nMask, c5);
-        if (MRemainder > 6) _mm512_mask_storeu_ps(c[6], nMask, c6);
-        if (MRemainder > 7) _mm512_mask_storeu_ps(c[7], nMask, c7);
-        if (MRemainder > 8) _mm512_mask_storeu_ps(c[8], nMask, c8);
-        if (MRemainder > 9) _mm512_mask_storeu_ps(c[9], nMask, c9);
-        if (MRemainder > 10) _mm512_mask_storeu_ps(c[10], nMask, cA);
-        if (MRemainder > 11) _mm512_mask_storeu_ps(c[11], nMask, cB);
-        if (MRemainder > 12) _mm512_mask_storeu_ps(c[12], nMask, cC);
-        if (MRemainder > 13) _mm512_mask_storeu_ps(c[13], nMask, cD);
-        if (MRemainder > 14) _mm512_mask_storeu_ps(c[14], nMask, cE);
-      }
-    }
+    b = params->B;
   }
 }
 
-void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, char *T, ThreadPool& threadPool) {
+void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, ThreadPool& threadPool) {
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
-  int MTiles = (M+15)>>4;
-  int NTiles = (N+15)>>4;
+  int MTiles = M>>4;
+  int NTiles = N>>4;
   int MNTiles = MTiles*NTiles;
   int blockSize = (MNTiles+numThreads-1)/numThreads;
-  char *a;
-  char *b;
-  char *c;
   int blockSizeBytes = blockSize<<6;
 #ifdef DEBUG
   printf("blockSize: %d, MTiles: %d, NTiles: %d\n", blockSize, MTiles, NTiles);
 #endif
-  char *localT = T;
-  for (int j = 0; j < MNTiles; j += blockSize, localT += K*64) {
+  for (int j = 0; j < MNTiles; j += blockSize) {
     int aBlockBytes = (j/NTiles)<<6;
     int bBlockBytes = (j%NTiles)<<6;
-    a = A + aBlockBytes;
-    b = B + bBlockBytes;
-    c = C + (aBlockBytes*N) + bBlockBytes;
+    char *a = A + aBlockBytes*K;
+    char *b = B + bBlockBytes*K;
+    char *c = C + (aBlockBytes*N) + bBlockBytes;
 #ifdef DEBUG
     printf("Call: %d %d A(%d %d) B(%d %d) C(%d %d)\n", aBlockBytes>>6, bBlockBytes>>6,
       (aBlockBytes>>2)/M, (aBlockBytes>>2)%M,
@@ -557,11 +303,10 @@ void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, c
     );
 #endif
     //threadPool.QueueJob(a, b, c, blockSize, &params, localT);
-    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params, localT));
+    threads.push_back(std::thread(MMF32, a, b, c, blockSize, &params));
   }
   //threadPool.WaitDone();
   for (auto &th: threads) {
     th.join();
   }
 }
-

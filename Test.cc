@@ -61,9 +61,12 @@ int main(int argc, char**argv) {
     printf("Usage: %s M N K check [numThreads] [seed]\n", argv[0]);
     return 1;
   }
-  const int M = atoi(argv[1]);
-  const int N = atoi(argv[2]);
-  const int K = atoi(argv[3]);
+  const int Morig = atoi(argv[1]);
+  const int Norig = atoi(argv[2]);
+  const int Korig = atoi(argv[3]);
+  const int M = ((Morig + 15) >> 4) << 4;
+  const int N = ((Norig + 15) >> 4) << 4;
+  const int K = ((Korig + 15) >> 4) << 4;
   int isCheck = atoi(argv[4]);
   int numThreads = std::thread::hardware_concurrency()-1;
   if (argc >= 6 && atoi(argv[5]) != 0)
@@ -77,7 +80,6 @@ int main(int argc, char**argv) {
   float *B = new float[N*K];
   float *C = new float[M*N];
   float *D = new float[M*N];
-  float *T = new float[K*16*numThreads];
   initialize(A, K, M);
   initialize(B, K, N);
   initialize(C, M, N);
@@ -96,14 +98,14 @@ int main(int argc, char**argv) {
   struct timespec start;
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 
-  MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, (char*)T, threadPool);
+  MMF32Full((char*)A, (char*)B, (char*)C, M, N, K, numThreads, threadPool);
 
   struct timespec end;
   clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
 
   long long diff = (end.tv_sec - start.tv_sec) * (long long)1e9 + (end.tv_nsec - start.tv_nsec);
 
-  printf("%d\t%d\t%d\t%lld\t%d\n", M, N, K, diff, numThreads);
+  printf("%d\t%d\t%d\t%lld\t%d\n", Morig, Norig, Korig, diff, numThreads);
 
   if (isCheck) {
     simple_mm(A, B, D, M, N, K);

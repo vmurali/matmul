@@ -17,14 +17,13 @@ struct MMF32FullParams {
   char *c;
   int blockSize;
   MMF32Params *params;
-  char *T;
 };
 
 class ThreadPool {
  public:
   ThreadPool(int _numThreads = 0);
   ~ThreadPool();
-  void QueueJob(char *a, char *b, char *c, int blockSize, MMF32Params *params, char *T);
+  void QueueJob(char *a, char *b, char *c, int blockSize, MMF32Params *params);
   bool BusyDone();
   void WaitDone();
   void Stop();
