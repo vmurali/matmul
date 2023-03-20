@@ -1,6 +1,6 @@
 #!/bin/bash
 
-makea >& /dev/null
+make >& /dev/null
 cp a.out perf
 
 for i in {5..14}
