@@ -1,4 +1,5 @@
 #include "Kernel.h"
+#include "Pack.h"
 #include "ThreadPool.h"
 
 #include <immintrin.h>
@@ -277,12 +278,18 @@ void MMF32(char *aCurr, char *bCurr, char *cCurr, int blockSize,
   }
 }
 
-void MMF32Full(char* A, char* B, char* C, int M, int N, int K, int numThreads, ThreadPool& threadPool) {
+void MMF32Full(char* Aorig, char* Borig, char* C, int Morig, int Norig, int Korig, int numThreads, ThreadPool& threadPool) {
+  char *A = (char*)PackLeft((float*)Aorig, Morig, Korig);
+  char *B = (char*)PackRight((float*)Borig, Norig, Korig);
+  int MTiles = Morig>>4;
+  int NTiles = Norig>>4;
+  int KTiles = Korig>>4;
+  int M = MTiles << 4;
+  int N = NTiles << 4;
+  int K = KTiles << 4;
   std::vector<std::thread> threads;
   threads.reserve(numThreads);
   MMF32Params params(A, B, C, M, N, K);
-  int MTiles = M>>4;
-  int NTiles = N>>4;
   int MNTiles = MTiles*NTiles;
   int blockSize = (MNTiles+numThreads-1)/numThreads;
   int blockSizeBytes = blockSize<<6;
